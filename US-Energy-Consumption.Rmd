@@ -1,8 +1,7 @@
 ---
 title: "\\vspace{-2.5cm} US Energy Consumption Data Cleaning,Visualisation and Analysis"
 output: 
-  output: html_document 
-  add keep_md: true
+  output: github_document
 ---
 
 ```{r setup, include=FALSE}
