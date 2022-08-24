@@ -2,6 +2,7 @@
 title: "\\vspace{-2.5cm} US Energy Consumption Data Cleaning,Visualisation and Analysis"
 output: 
   output: html_document
+  add keep_md: true
 ---
 
 ```{r setup, include=FALSE}
@@ -75,6 +76,7 @@ We observe that:
 * The data includes missing values that are labelled as "Non available."
 * As we mentioned above, some columns describe the same property, and as a result, we will drop them.
 * The majority of our data is classified as characters apart from the date and column order, which are classified as numbers.
+
 We convert the original matrix into a data frame and drop the columns we mentioned above.We also convert the values that are set to "Not Available" to NA. 
 ```{r,echo=TRUE}
 dat<-data.frame(orig_dat)

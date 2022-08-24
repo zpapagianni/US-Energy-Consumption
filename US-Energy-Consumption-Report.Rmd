@@ -1,0 +1,376 @@
+---
+title: "US Energy Consumption Data Cleaning,Visualisation and Analysis"
+output: github_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(ggplot2)
+library(tidyverse) 
+library(kableExtra)
+library(grid)
+library(gridExtra)
+library(lubridate) 
+library(reshape2)
+library(stringr)
+library(zoo)
+library(TTR)
+library(tseries)
+library(naniar)
+```
+
+## Data description
+We consider data from the US Energy Information Administration’s online data browser.The data was downloaded from Table 2.2 of the US Energy Information Administration’s online data browser (https://www.eia.gov/totalenergy/data/browser/). The data set contains multiple time series, detailing:
+
+* Primary US residential energy consumption patterns per energy source (Fossil Fuels and Renewable Energy) from 1949 until 2021.
+* Electricity Retail Sales
+* Electrical System Energy Losses
+
+The aim of this study is to analyse the monthly residential energy consumption in the US, since January 2000.We will consider two cases:
+
+* one of the time series in the dataset.
+* multiple time series in the dataset.
+
+The data includes 7,896 observations for each month of each year since 1949 with 6 columns as it can be seen in the table below.
+ 
+```{r,echo=FALSE}
+orig_dat <- read_csv("data.csv",show_col_types = FALSE)
+knitr::kable(head(orig_dat,5), align = 'c') 
+```
+
+In particular: 
+
+* The Columns MSN, Column_order and Description are describing the the source of energy. (i.e. Coal, Natural Gas, Geothermal etc.)
+* All the values have the same units (Trillion BTU).
+
+## Data cleaning
+
+Before processing the data, we extract the abbreviations (MSN) and descriptions(Description), and we divide them into two data frames, one containing all individual energy consumption per source and one containing the total values. Those will be later used for the visualizations.
+The two tables can be seen below:
+
+```{r,echo=TRUE}
+##Extract codes and names
+code<-data.frame(Detail=unique(orig_dat$MSN),Desc=unique(orig_dat$Description))
+
+##Individual Values
+ind<-code %>% 
+  filter(!grepl('Total', Desc))
+
+##Total Values 
+tot<-code %>% 
+  filter(grepl('Total', Desc))
+```
+
+Next, we look into the data type of each column.
+```{r,echo=TRUE}
+str(orig_dat)
+unique(orig_dat$Unit)
+```
+
+We observe that:
+
+* The data includes missing values that are labelled as "Non available."
+* As we mentioned above, some columns describe the same property, and as a result, we will drop them.
+* The majority of our data is classified as characters apart from the date and column order, which are classified as numbers.
+We convert the original matrix into a data frame and drop the columns we mentioned above.We also convert the values that are set to "Not Available" to NA. 
+```{r,echo=TRUE}
+dat<-data.frame(orig_dat)
+#Drop columns
+dat<-subset(orig_dat, select = -c(Unit,Description,Column_Order))
+###Missing values
+dat$Value[dat$Value=='Not Available']<-NA
+```
+The column containing the dates is set to the numeric data type. We convert it to characters, extract the year and month, and finally drop the original column. Next, we drop the rows containing data from 1949 to 1999. Finally, we observe that there is a month 13, which corresponds to the total energy consumption for each year. 
+```{r,echo=TRUE}
+##Convert to character
+dat$YYYYMM<-as.character(dat$YYYYMM)
+##Create new column containing the dates
+dat <- dat %>%
+  add_column(year = substr(dat$YYYYMM, start = 1, stop = 4),.after = "YYYYMM") 
+dat <- dat %>%
+  add_column(mon = substr(dat$YYYYMM, start = 5, stop = 6),.after = "year")  
+##Drop original column
+dat <- subset(dat, select = -YYYYMM )
+## Drop rows with a date before january 2000
+ec<-subset(dat,year>=2000)
+## Drop rows with month 13 which corresponds to total
+ec<-subset(ec,mon!=13)
+```
+
+Finally, we convert all columns to the correct data types.
+```{r,echo=TRUE}
+#Combine dates in the right format
+ec$year<-as.numeric(ec$year)
+ec$mon<-as.numeric(ec$mon)
+ec$Value<-as.numeric(ec$Value)
+ec$Date <- as.yearmon(paste(ec$year, ec$mon), "%Y %m")
+```
+
+The final data frame can be seen below:
+```{r,echo=FALSE}
+##Table
+knitr::kable(head(ec,5), align = 'c')
+```
+Note: The last column may appear redundant, since we already have the year and month in the previous columns. We keep it as the format is easier for visualisation purposes.
+
+## Missing Values
+
+There are 166 missing values, as seen in the figure and table below. Those values are only missing from the data containing coal energy consumption. To make the visualization process easier, we dropped such values rather of using them.
+
+```{r,echo=TRUE}
+#Find number a missing values per group
+gg_miss_fct(ec, MSN) 
+ec %>% group_by(MSN) %>% summarise(
+  non_na = sum(!is.na(Value)),na = sum(is.na(Value)))
+#Delete NAs and get final data frame
+f.data <- na.omit(ec) 
+```
+
+## Visualisations
+### Residential Sector Energy Consumption per source
+
+Let's start by visualizing the energy consumption for each energy source.
+```{r,echo=FALSE,out.width="70%",fig.align='center'}
+##Individual time series
+ind.dat<-f.data %>% filter(MSN %in% ind$Detail)
+ind.dat<-subset(ind.dat,select=c(MSN,Value,Date))
+ggplot(data = ind.dat, aes(x = Date,y = Value,color=MSN))+
+  geom_line()+
+  ggtitle("Residential Sector Natural Gas Energy Consumption") +
+  xlab("Date") +
+  ylab("Trillion BTU")
+```
+It's difficult to detect any distinct trends from the above graph. We observe natural gas is the most used energy source with significant variations between the winter and summer seasons. Additionally, we can observe that although there has been a little increasing tendency in electricity sales over time, volatility has remained constant. We're going to visualize individually the consumption for fossil fuels and renewable energy.
+
+```{r,echo=FALSE,out.width="70%",fig.align='center'}
+##Fossil fuels
+ind.dat %>% filter(MSN== 'CLRCBUS' | MSN=='NNRCBUS' | MSN=='PARCBUS' | MSN=='ESRCBUS') %>% 
+  ggplot(aes(x = Date,y = Value,color=MSN))+
+  geom_line()+
+  ggtitle("Residential Sector Fossil Fuels Consumption") +
+  xlab("Date") +
+  ylab("Trillion Btu")
+
+##Renewable energy 
+ind.dat %>% filter(MSN %in% ind$Detail[4:6]) %>% 
+  ggplot(aes(x = Date,y = Value,color=MSN))+
+  geom_line()+
+  ggtitle("Residential Sector Renewable Energy Consumption") +
+  xlab("Date") +
+  ylab("Trillion Btu")
+```
+
+## Individual sources: Pie charts and Line graphs
+
+Next to better see the amount of energy used by each source, we will create a pie chart. The tables created in the data cleaning phase can be used to interpret the abbreviations.
+
+```{r,echo=FALSE,}
+##Total per group all time
+ind.sums<-ind.dat %>%filter(MSN != 'ESRCBUS') %>% group_by(MSN) %>% summarise(sum=sum(Value))
+ggplot(ind.sums, aes(x="", y=sum, fill=MSN))+
+  ggtitle("Residential Sector Energy Consumption")+
+  geom_bar(width = 1, stat = "identity")+
+  coord_polar("y", start=0)
+```
+
+Finally, we're going to visualise the mean energy consumed per individual energy source. 
+```{r,echo=FALSE}
+##Group by mean
+ind.dat %>% group_by(year=year(Date),MSN) %>% summarise(mean=mean(Value)) %>% 
+  ggplot(aes(x = year,y = mean,color=MSN))+
+  geom_line()+
+  ggtitle("Total Energy Consumption per source each year") +
+  xlab("Date") +
+  ylab("Trillion Btu")
+```
+
+## Summary statistics and box plots per individual source 
+```{r,echo=FALSE,}
+##Summary statistics
+##Reshape dataframe
+ind.spr<-ind.dat%>% 
+  group_by(Date, MSN)%>%
+  spread(MSN, Value)
+ind.spr<-na.omit(ind.spr)
+ind.spr %>% summary
+apply(ind.spr,2,sd)
+stats<-ind.dat[,1:2] %>% group_by(MSN) %>% summarise(mean=mean(Value),sd=sd(Value), max=max(Value),min= min(Value))
+
+ind.dat %>% group_by(MSN) 
+ggplot(ind.dat,aes(x = MSN,y = Value,color=MSN))+
+  geom_boxplot()+
+  ggtitle("Total Energy Consumption per source each year") +
+  xlab("Date") +
+  ylab("Trillion Btu")
+```
+
+
+## Total Energy consumption
+We are going to calculate the summary data for the total consumption and sales.The graphs below show the total energy consumed, the energy consumed in the recent years and the proportion of each one.
+
+```{r,echo=FALSE,}
+##Separate total values
+tot.dat<-f.data %>% filter(MSN %in% tot$Detail)
+tot.dat<-subset(tot.dat,select=c(MSN,Value,Date))
+
+tot.spr<-tot.dat %>%
+  group_by(Date, MSN)%>%
+  spread(MSN, Value)
+
+##Summary statistics
+tot.spr[,2:5] %>% summary
+
+ggplot(data = tot.dat, aes(x = Date,y = Value,color=MSN))+
+  geom_line()+
+  ggtitle("Residential Sector Natural Gas Energy Consumption") +
+  xlab("Date") +
+  ylab("Trillion Btu")
+
+##Recent data
+tot.dat %>% filter(Date>="Jan 2018") %>% 
+  ggplot(aes(x = Date,y = Value,color=MSN))+
+  geom_line()+
+  ggtitle("Residential Sector Natural Gas Energy Consumption 2018-2021") +
+  xlab("Date") +
+  ylab("Trillion Btu")
+ 
+```
+
+## Univariate data
+For the univariate explaratory data analysis we choose to study the natural gas consumption. We create a time series with the values that we subseted from the dataset starting from 2000 with monthly frequency. 
+```{r,echo=FALSE,}
+##Univariate data -----------------------------
+##Choose time series -> Natural Gas consumption
+ec.un_data<-subset(f.data , MSN=='NNRCBUS')
+ec.un<-ts(ec.un_data$Value,start=2000, frequency=12)
+knitr::kable(head(ec.un_data,5), align = 'c')
+```
+
+## Visualisation
+
+```{r,echo=FALSE,}
+ggplot(data = ec.un_data, aes(x = Date, y = Value))+
+  geom_line(color = "black", size = 0.8)+
+  ggtitle("Moving Average-Natural Gas Energy Consumption") +
+  xlab("Date") +
+  ylab("Trillion Btu")
+```
+```{r,echo=FALSE}
+##Moving average for each year
+ec.un_data %>%
+  mutate(seven_avg= rollmean(Value, 12,
+                             align="left", 
+                             fill=0)) %>%
+  ggplot(aes(x=Date,
+             y=Value)) +
+  geom_col(fill="pink")+
+  geom_line(aes(y = seven_avg), 
+            color = "red", 
+            size = .75)+
+  labs(title="Residential Sector Natural Gas Energy Consumption",
+       y="Trillion Btu")
+```
+
+## Time series Analysis of Natural Gas consumption 
+
+### Autocorrelation and Partial Correlation
+In the figure below, it can be observed that the ACF is sinusoidal, which implies that the ACF is periodic. The peak recurs every 12 implies that the ACF has a period of 12 lags which when calculated is equivalent to a year.
+
+The ACF is not approaching zero and thus it is most probably not stationary.It can also be observed that the majority of the ACF values are not within the bounds of statistical significance.
+
+```{r,echo=FALSE,fig.show="hold",out.width="50%",fig.align='center'}
+##Autocorrelation, Partial-Autocorrelation
+par(mfrow=c(1,2))
+n<-36
+acf(ec.un, lag.max=n, xaxt="n", xlab="Lag (months)")
+axis(1, at=0:n/12, labels=0:n)
+
+n<-36
+pacfRes<-pacf(ec.un)
+pacf(ec.un, lag.max=n, xaxt="n", xlab="Lag (months)")
+axis(1, at=0:n/12, labels=0:n)
+```
+
+
+## Linear Trend
+On the figure below, we observe that there is a slight upward trend.
+
+```{r,echo=FALSE}
+time <- 1:length(ec.un)
+lm_fit <- lm(ec.un ~ time)
+trend <- lm_fit$fitted.values
+ec_lr <- ec.un - trend
+ec.un_data$Detrend<-as.numeric(ec_lr)
+
+ggplot(data = ec.un_data, aes(x = Date))+
+  geom_line(aes(y = Value,color = 'Original series'))+
+  geom_line(aes(y = Detrend,color = 'Detrend series'))+
+  ggtitle("Residential Sector Natural Gas Energy Consumption") +
+  xlab("Date") +ylab("Trillion Btu")
+```
+
+### Seosonality
+
+```{r,echo=FALSE}
+## Seasonality
+ec_dlr <- diff(ec_lr, lag = 12)
+plot(ec_dlr)
+n<-48
+acf(ec_dlr,lag.max = 48,xaxt="n", xlab="Lag (months)")
+axis(1, at=0:n/12, labels=0:n)
+pacf(ec_dlr, lag.max=n)
+axis(1, at=0:n/12, labels=0:n)
+```
+
+### Time series after removing linear trend and seasonality
+
+```{r,echo=FALSE}
+fin.ecun<-data.frame(Season=as.matrix(ec_dlr), date=as.Date(time(ec_dlr)))
+
+ggplot(data = fin.ecun, aes(x = date,y = Season))+
+  geom_line()+
+  ggtitle("Residential Sector Natural Gas Energy Consumption") +
+  xlab("Date") +ylab("Trillion Btu")
+
+```
+
+
+## Multivariate Data
+For the multivariate analysis we're choosing to study the total fossil and renewable energy consumption.For this purpose we create a new dataframe containing the variables of interest and then we reshape it in order to make our analysis easier.
+
+```{r,echo=FALSE}
+##Multivariate data |Total fossil and Total renewable 
+ec.mult_data<-data.frame(Date=ec$Date,Val=ec$Value,Code=ec$MSN)
+ec.mult_data<-subset(ec.mult_data,Code=='FFRCBUS'|Code=='RERCBUS')
+##Reshape dataframe
+ec.mult_data<-spread(ec.mult_data,Code,Val)
+##Rename columns
+colnames(ec.mult_data)[2] <- 'Fos'
+colnames(ec.mult_data)[3] <- 'Ren'
+## Remove date column
+ec.mult<-subset(ec.mult_data, select = -Date ) 
+##Create time series
+ec.mult<-ts(ec.mult,start=2000, frequency=12)
+```
+
+We can see from the below graphic that there is a significant disparity between the usage of fossil fuels and renewable energy sources. We will examine each one in more detail in the sections that follow.
+
+```{r,echo=FALSE}
+##Plot variables
+ggplot()+
+  geom_line(data = ec.mult_data, aes(x = Date, y = Fos,color = "Fossil Fuels"))+
+  geom_line(data = ec.mult_data, aes(x = Date, y = Ren,color = "Renewable energy"))+
+  ggtitle("Total fossil and renewable energy consuption (01/2000-10/2021)") +
+  xlab("Date") +
+  ylab("Trillion Btu")
+```
+
+### ACF and PACF
+```{r,echo=FALSE}
+##Autocorrelation, Partial-Autocorrelation and Cross correlation
+acfRes<-acf(ec.mult)
+pacfRes<-pacf(ec.mult)
+```
+
