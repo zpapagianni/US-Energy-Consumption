@@ -17,8 +17,8 @@ The aim of this study is to analyse the monthly residential energy consumption i
 * Multivariate Time series Analysis.
 
 Here are the different files:
-* [US-Energy-Consumption.md](./US-Energy-Consumption.md): 
 * [US-Energy-Consumption.Rmd](./US-Energy-Consumption.Rmd):The rmarkdown file that contains the detailed step of the analysis.
+* [US-Energy-Consumption-Report.Rmd](./US-Energy-Consumption-Report.Rmd): The rmarkdown file used to produce the github friendly document that can be found [here](US-Energy-Consumption-Report.md)
 * [US-Energy-Consumption.R](./US-Energy-Consumption.R): Contains the code that was used for the analysis.
 * [data.csv](./data.csv): Input data.
 
