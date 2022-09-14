@@ -441,7 +441,8 @@ used to interpret the abbreviations.
 Finally, we’re going to visualise the mean energy consumed per
 individual energy source.
 
-    ## `summarise()` has grouped output by 'year'. You can override using the `.groups` argument.
+    ## `summarise()` has grouped output by 'year'. You can override using the `.groups`
+    ## argument.
 
 ![](US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 

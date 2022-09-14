@@ -1,8 +1,10 @@
 ---
-title: "\\vspace{-2.5cm} US Energy Consumption Data Cleaning,Visualisation and Analysis"
-output: 
-  output: html_document
-  add keep_md: true
+title: "US Energy Consumption Data Cleaning,Visualisation and Analysis"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -21,6 +23,14 @@ library(TTR)
 library(tseries)
 library(naniar)
 ```
+## Introduction
+The aim of this study is to analyse the monthly residential energy consumption in the US, since January 2000. The analysis contains parts:
+
+* Data cleaning
+* Analysis of Missing Values
+* Visualizations
+* Univariate Time series Analysis.
+* Multivariate Time series Analysis
 
 ## Data description
 We consider data from the US Energy Information Administration’s online data browser.The data was downloaded from Table 2.2 of the US Energy Information Administration’s online data browser (https://www.eia.gov/totalenergy/data/browser/). The data set contains multiple time series, detailing:
@@ -28,11 +38,6 @@ We consider data from the US Energy Information Administration’s online data b
 * Primary US residential energy consumption patterns per energy source (Fossil Fuels and Renewable Energy) from 1949 until 2021.
 * Electricity Retail Sales
 * Electrical System Energy Losses
-
-The aim of this study is to analyse the monthly residential energy consumption in the US, since January 2000.We will consider two cases:
-
-* one of the time series in the dataset.
-* multiple time series in the dataset.
 
 The data includes 7,896 observations for each month of each year since 1949 with 6 columns as it can be seen in the table below.
  
@@ -49,7 +54,7 @@ In particular:
 
 ## Data cleaning
 
-Before processing the data, we extract the abbreviations (MSN) and descriptions(Description), and we divide them into two data frames, one containing all individual energy consumption per source and one containing the total values. Those will be later used for the visualizations.
+Before processing the data, we separate the abbreviations (MSN) and descriptions (Description) into two data frames, one of which contains the overall values and the other of which contains all individual energy consumption per source.
 The two tables can be seen below:
 
 ```{r,echo=TRUE}
@@ -66,26 +71,28 @@ tot<-code %>%
 ```
 
 Next, we look into the data type of each column.
-```{r,echo=TRUE}
-str(orig_dat)
-unique(orig_dat$Unit)
+```{r,echo=FALSE}
+#Data Types
+knitr::kable(sapply(orig_dat, class), align = 'c') %>%
+  kableExtra::kable_styling(latex_options = "hold_position")
 ```
 
-We observe that:
+Looking closer at the data set, we observe that:
 
 * The data includes missing values that are labelled as "Non available."
-* As we mentioned above, some columns describe the same property, and as a result, we will drop them.
+* As we mentioned above, the columns `description`,`column_order` and `MSN` describe the same property, and as a result, we will drop them.
 * The majority of our data is classified as characters apart from the date and column order, which are classified as numbers.
 
 We convert the original matrix into a data frame and drop the columns we mentioned above.We also convert the values that are set to "Not Available" to NA. 
 ```{r,echo=TRUE}
+#Create new dataframe in order to preserve the original data
 dat<-data.frame(orig_dat)
-#Drop columns
+#Drop columns 
 dat<-subset(orig_dat, select = -c(Unit,Description,Column_Order))
-###Missing values
+#Convert missing values
 dat$Value[dat$Value=='Not Available']<-NA
 ```
-The column containing the dates is set to the numeric data type. We convert it to characters, extract the year and month, and finally drop the original column. Next, we drop the rows containing data from 1949 to 1999. Finally, we observe that there is a month 13, which corresponds to the total energy consumption for each year. 
+The column containing the dates is set to the numeric data type. We convert it to characters, extract the year and month, and drop the original column. Next, we drop the rows containing data from 1949 to 1999, since we only interested on data containing information after 2000 . Finally, we observe that there is a month 13, which corresponds to the total energy consumption for each year. 
 ```{r,echo=TRUE}
 ##Convert to character
 dat$YYYYMM<-as.character(dat$YYYYMM)
@@ -115,7 +122,7 @@ The final data frame can be seen below:
 knitr::kable(head(ec,5), align = 'c') %>%
   kableExtra::kable_styling(latex_options = "hold_position")
 ```
-Note: The last column may appear redundant, since we already have the year and month in the previous columns. We keep it as the format is easier for visualisation purposes.
+Note: The last column may appear redundant, since we already have the year and month in the previous columns. We keep it as the format is easier for visualization purposes.
 
 ## Missing Values
 
@@ -164,7 +171,7 @@ ind.dat %>% filter(MSN %in% ind$Detail[4:6]) %>%
   ylab("Trillion Btu")
 ```
 
-## Individual sources: Pie charts and Line graphs
+### Individual sources: Pie charts and Line graphs
 
 Next to better see the amount of energy used by each source, we will create a pie chart. The tables created in the data cleaning phase can be used to interpret the abbreviations.
 
@@ -188,7 +195,7 @@ ind.dat %>% group_by(year=year(Date),MSN) %>% summarise(mean=mean(Value)) %>%
   ylab("Trillion Btu")
 ```
 
-## Summary statistics and box plots per individual source 
+### Summary statistics and box plots per individual source 
 ```{r,echo=FALSE,}
 ##Summary statistics
 ##Reshape dataframe
@@ -209,7 +216,7 @@ ggplot(ind.dat,aes(x = MSN,y = Value,color=MSN))+
 ```
 
 
-## Total Energy consumption
+### Total Energy consumption
 We are going to calculate the summary data for the total consumption and sales.The graphs below show the total energy consumed, the energy consumed in the recent years and the proportion of each one.
 
 ```{r,echo=FALSE,}
@@ -240,7 +247,7 @@ tot.dat %>% filter(Date>="Jan 2018") %>%
  
 ```
 
-## Univariate data
+## Univariate data analysis
 For the univariate explaratory data analysis we choose to study the natural gas consumption. We create a time series with the values that we subseted from the dataset starting from 2000 with monthly frequency. 
 ```{r,echo=FALSE,}
 ##Univariate data -----------------------------
@@ -251,7 +258,7 @@ knitr::kable(head(ec.un_data,5), align = 'c') %>%
   kableExtra::kable_styling(latex_options = "hold_position")
 ```
 
-## Visualisation
+### Visualisation
 
 ```{r,echo=FALSE,}
 ggplot(data = ec.un_data, aes(x = Date, y = Value))+
@@ -297,7 +304,7 @@ axis(1, at=0:n/12, labels=0:n)
 ```
 
 
-## Linear Trend
+### Linear Trend
 On the figure below, we observe that there is a slight upward trend.
 
 ```{r,echo=FALSE}
