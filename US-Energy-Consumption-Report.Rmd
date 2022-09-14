@@ -65,21 +65,23 @@ tot<-code %>%
 
 Next, we look into the data type of each column.
 ```{r,echo=TRUE}
-str(orig_dat)
-unique(orig_dat$Unit)
+#Data Types
+sapply(orig_dat, class)
 ```
 
-We observe that:
+Looking closer at the data set, we observe that:
 
 * The data includes missing values that are labelled as "Non available."
-* As we mentioned above, some columns describe the same property, and as a result, we will drop them.
+* As we mentioned above, the columns `description`,`column_order` and `MSN` describe the same property, and as a result, we will drop them.
 * The majority of our data is classified as characters apart from the date and column order, which are classified as numbers.
-We convert the original matrix into a data frame and drop the columns we mentioned above.We also convert the values that are set to "Not Available" to NA. 
+
+We convert the original matrix into a data frame and drop the columns we mentioned above.We also convert the values that are set to "Not Available" to NA.
 ```{r,echo=TRUE}
+#Create new dataframe in order to preserve the original data
 dat<-data.frame(orig_dat)
-#Drop columns
+#Drop columns 
 dat<-subset(orig_dat, select = -c(Unit,Description,Column_Order))
-###Missing values
+#Convert missing values
 dat$Value[dat$Value=='Not Available']<-NA
 ```
 The column containing the dates is set to the numeric data type. We convert it to characters, extract the year and month, and finally drop the original column. Next, we drop the rows containing data from 1949 to 1999. Finally, we observe that there is a month 13, which corresponds to the total energy consumption for each year. 
@@ -162,7 +164,7 @@ ind.dat %>% filter(MSN %in% ind$Detail[4:6]) %>%
   ylab("Trillion Btu")
 ```
 
-## Individual sources: Pie charts and Line graphs
+### Individual sources: Pie charts and Line graphs
 
 Next to better see the amount of energy used by each source, we will create a pie chart. The tables created in the data cleaning phase can be used to interpret the abbreviations.
 
@@ -186,7 +188,7 @@ ind.dat %>% group_by(year=year(Date),MSN) %>% summarise(mean=mean(Value)) %>%
   ylab("Trillion Btu")
 ```
 
-## Summary statistics and box plots per individual source 
+### Summary statistics and box plots per individual source 
 ```{r,echo=FALSE,}
 ##Summary statistics
 ##Reshape dataframe
@@ -207,7 +209,7 @@ ggplot(ind.dat,aes(x = MSN,y = Value,color=MSN))+
 ```
 
 
-## Total Energy consumption
+### Total Energy consumption
 We are going to calculate the summary data for the total consumption and sales.The graphs below show the total energy consumed, the energy consumed in the recent years and the proportion of each one.
 
 ```{r,echo=FALSE,}
@@ -238,7 +240,7 @@ tot.dat %>% filter(Date>="Jan 2018") %>%
  
 ```
 
-## Univariate data
+## Univariate data analysis
 For the univariate explaratory data analysis we choose to study the natural gas consumption. We create a time series with the values that we subseted from the dataset starting from 2000 with monthly frequency. 
 ```{r,echo=FALSE,}
 ##Univariate data -----------------------------
@@ -248,7 +250,7 @@ ec.un<-ts(ec.un_data$Value,start=2000, frequency=12)
 knitr::kable(head(ec.un_data,5), align = 'c')
 ```
 
-## Visualisation
+### Visualisation
 
 ```{r,echo=FALSE,}
 ggplot(data = ec.un_data, aes(x = Date, y = Value))+
@@ -294,7 +296,7 @@ axis(1, at=0:n/12, labels=0:n)
 ```
 
 
-## Linear Trend
+### Linear Trend
 On the figure below, we observe that there is a slight upward trend.
 
 ```{r,echo=FALSE}

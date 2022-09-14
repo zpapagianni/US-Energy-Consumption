@@ -180,50 +180,33 @@ tot<-code %>%
 Next, we look into the data type of each column.
 
 ``` r
-str(orig_dat)
+#Data Types
+sapply(orig_dat, class)
 ```
 
-    ## spec_tbl_df [7,896 × 6] (S3: spec_tbl_df/tbl_df/tbl/data.frame)
-    ##  $ MSN         : chr [1:7896] "CLRCBUS" "CLRCBUS" "CLRCBUS" "CLRCBUS" ...
-    ##  $ YYYYMM      : num [1:7896] 194913 195013 195113 195213 195313 ...
-    ##  $ Value       : chr [1:7896] "1271.551" "1261.267" "1158.679" "1079.206" ...
-    ##  $ Column_Order: num [1:7896] 1 1 1 1 1 1 1 1 1 1 ...
-    ##  $ Description : chr [1:7896] "Coal Consumed by the Residential Sector" "Coal Consumed by the Residential Sector" "Coal Consumed by the Residential Sector" "Coal Consumed by the Residential Sector" ...
-    ##  $ Unit        : chr [1:7896] "Trillion Btu" "Trillion Btu" "Trillion Btu" "Trillion Btu" ...
-    ##  - attr(*, "spec")=
-    ##   .. cols(
-    ##   ..   MSN = col_character(),
-    ##   ..   YYYYMM = col_double(),
-    ##   ..   Value = col_character(),
-    ##   ..   Column_Order = col_double(),
-    ##   ..   Description = col_character(),
-    ##   ..   Unit = col_character()
-    ##   .. )
-    ##  - attr(*, "problems")=<externalptr>
+    ##          MSN       YYYYMM        Value Column_Order  Description         Unit 
+    ##  "character"    "numeric"  "character"    "numeric"  "character"  "character"
 
-``` r
-unique(orig_dat$Unit)
-```
-
-    ## [1] "Trillion Btu"
-
-We observe that:
+Looking closer at the data set, we observe that:
 
 -   The data includes missing values that are labelled as “Non
     available.”
--   As we mentioned above, some columns describe the same property, and
-    as a result, we will drop them.
+-   As we mentioned above, the columns `description`,`column_order` and
+    `MSN` describe the same property, and as a result, we will drop
+    them.
 -   The majority of our data is classified as characters apart from the
-    date and column order, which are classified as numbers. We convert
-    the original matrix into a data frame and drop the columns we
-    mentioned above.We also convert the values that are set to “Not
-    Available” to NA.
+    date and column order, which are classified as numbers.
+
+We convert the original matrix into a data frame and drop the columns we
+mentioned above.We also convert the values that are set to “Not
+Available” to NA.
 
 ``` r
+#Create new dataframe in order to preserve the original data
 dat<-data.frame(orig_dat)
-#Drop columns
+#Drop columns 
 dat<-subset(orig_dat, select = -c(Unit,Description,Column_Order))
-###Missing values
+#Convert missing values
 dat$Value[dat$Value=='Not Available']<-NA
 ```
 
@@ -430,7 +413,7 @@ renewable energy.
 
 <img src="US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-10-1.png" width="70%" style="display: block; margin: auto;" /><img src="US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-10-2.png" width="70%" style="display: block; margin: auto;" />
 
-## Individual sources: Pie charts and Line graphs
+### Individual sources: Pie charts and Line graphs
 
 Next to better see the amount of energy used by each source, we will
 create a pie chart. The tables created in the data cleaning phase can be
@@ -446,7 +429,7 @@ individual energy source.
 
 ![](US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
-## Summary statistics and box plots per individual source
+### Summary statistics and box plots per individual source
 
     ##       Date         BMRCBUS         CLRCBUS          ESRCBUS     
     ##  Min.   :2000   Min.   :28.38   Min.   :0.3820   Min.   :260.1  
@@ -496,7 +479,7 @@ individual energy source.
 
 ![](US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
-## Total Energy consumption
+### Total Energy consumption
 
 We are going to calculate the summary data for the total consumption and
 sales.The graphs below show the total energy consumed, the energy
@@ -512,7 +495,7 @@ consumed in the recent years and the proportion of each one.
 
 ![](US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->![](US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-14-2.png)<!-- -->
 
-## Univariate data
+## Univariate data analysis
 
 For the univariate explaratory data analysis we choose to study the
 natural gas consumption. We create a time series with the values that we
@@ -626,7 +609,7 @@ May 2000
 </tbody>
 </table>
 
-## Visualisation
+### Visualisation
 
 ![](US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 ![](US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
@@ -646,7 +629,7 @@ are not within the bounds of statistical significance.
 
 <img src="US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-18-1.png" width="50%" style="display: block; margin: auto;" /><img src="US-Energy-Consumption-Report_files/figure-gfm/unnamed-chunk-18-2.png" width="50%" style="display: block; margin: auto;" />
 
-## Linear Trend
+### Linear Trend
 
 On the figure below, we observe that there is a slight upward trend.
 
